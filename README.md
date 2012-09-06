@@ -1,4 +1,4 @@
 MultiTimeSeries
 ===============
 
-Multivariate time series analysis tools.
+Multivariate time series analysis library in haskell.
