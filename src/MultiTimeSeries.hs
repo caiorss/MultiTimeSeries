@@ -9,29 +9,23 @@
 
 
 module MultiTimeSeries (
-MSample,
-Vector,
-Matrix,
-MWeightedSample,
-mean,
-crossvariance,
-crosscorrelation,
-portmanteauTest,
-varModel,
-varForecast,
-varResidual,
-oslResidualCovariance,
-mlResidualCovariance,
-akaikeInfoCrit,
-weaklyStationary,
-mahalanobisDistance,
-filterMahalanobis,
-prop_mean_invariant_under_reversion,
-prop_mean_linear,
-prop_cv_symmetric,
-prop_cv_transformation,
-prop_ccv_switch_args,
-prop_ccv_sum
+        Sample
+        , Vector
+        , Matrix
+        , WeightedSample
+        , mean
+        , crossvariance
+        , crosscorrelation
+        , portmanteauTest
+        , varModel
+        , varForecast
+        , varResidual
+        , oslResidualCovariance
+        , mlResidualCovariance
+        , akaikeInfoCrit
+        , weaklyStationary
+        , mahalanobis
+        , fromLists
 )
 
 where
@@ -186,23 +180,32 @@ companionMatrix i _ | i <= 0 = undefined
 companionMatrix dimV vm = P.fromBlocks [[0, C.ident (dimV * (p - 1))], reverse $ snd vm] where p = length $ snd vm
 
 -- | Mahalanobis distance.
-mahalanobisDistance :: Matrix -- ^ Inverse covariance matrix.
+mahalanobis :: Matrix -- ^ Inverse covariance matrix.
                         -> Vector
                         -> Double
-mahalanobisDistance m_Sigma_inv v = v `C.dot` (m_Sigma_inv C.<> v)
-
--- | Filter by Mahalanobis distance.
-filterMahalanobis :: Matrix -- ^ Inverse covariance matrix.
-                        -> Double -- ^ Radius.
-                        -> [Vector] -> [Maybe Vector] -- ^ Filter function.
-filterMahalanobis m_Sigma mu vs = h vs Nothing where
-    h [] _ = []
-    h (y:ys) Nothing = Just y : h ys (Just y)
-    h (y:ys) (Just c) = if mahalanobisDistance m_Sigma (y - c) < mu then Nothing : h ys (Just c) else Just y : h ys (Just y)
+mahalanobis m_Sigma_inv v = v `C.dot` (m_Sigma_inv C.<> v)
 
 -- | Calculate the trace of a matrix.
 trace :: Matrix -> Double
 trace m = G.sum $ LA.takeDiag m 
 
-badMSample :: MSample -> Bool
-badMSample s = null s || G.null (head s)
+-- | Create a sample from an array of 1-dimensional samples with timestamps.
+fromLists :: Ord a => V.Vector [(Double, a)] -> [Vector]
+fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
+
+fromLists' :: Ord a => V.Vector [(Double, a)] -> [V.Vector (Double, a)]
+fromLists' xs = go (Just first) []
+    where 
+            go (Just v) vs = go (next v) (v : vs)
+            go Nothing vs = vs
+
+            first = V.map Z.cursor zippers
+            zippers = V.map Z.fromListEnd xs
+
+            next v = fmap (\n -> v V.// [(i, n)]) (left $ zippers V.! i) where i = maxIndex v
+            maxIndex = V.maxIndexBy (compare `on` snd)
+            left = Z.safeCursor . Z.left
+
+-- | Convert generic vectors to vectors of hmatrix.
+toHVector :: V.Vector Double -> Vector
+toHVector v = P.buildVector (V.length v) (v V.!)
