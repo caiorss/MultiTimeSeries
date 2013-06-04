@@ -190,9 +190,11 @@ trace :: Matrix -> Double
 trace m = G.sum $ LA.takeDiag m 
 
 -- | Create a sample from an array of 1-dimensional samples with timestamps.
+-- | TODO: if performance of this 'map' is bad, this should be replaced by a direct method as in fromLists'.
 fromLists :: Ord a => V.Vector [(Double, a)] -> [Vector]
 fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
 
+-- | Create a list of vector with values and timestamps.
 fromLists' :: Ord a => V.Vector [(Double, a)] -> [V.Vector (Double, a)]
 fromLists' xs = go (Just first) []
     where 
