@@ -48,7 +48,7 @@ type Vector = P.Vector Double
 type Matrix = P.Matrix Double
 type Sample = [Vector]
 type WeightedSample = [(Double, Vector)]
-type VarModel = (Vector, [Matrix]) -- ^ (\phi_0, matrices \Phi_1 ... \Phi_p).
+data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} -- ^ (\phi_0, matrices \Phi_1 ... \Phi_p).
 
 
 -- | Estimates the mean of a sample.
@@ -112,14 +112,14 @@ varModel dimV p s = let
     cs_m_B = P.toColumns m_B
     submatrices cs = (take dimV cs : submatrices (drop dimV cs))
     in
-    (head cs_m_B, map P.fromColumns (submatrices $ tail cs_m_B))
+    VarModel (head cs_m_B) (map P.fromColumns (submatrices $ tail cs_m_B))
 
 -- | Forecast of a var(p)_model.
 varForecast :: VarModel  -- ^ The var(p) model as returned by varModel.
                 -> [Vector] -- ^ [r_{t-1}, r_{t-2}, ... r_{t-p}]
                 -> Vector -- ^ The resulting forecast.
 varForecast _ vs | null vs = undefined
-varForecast vm rs = fst vm + sum (zipWith (C.<>) (snd vm) rs)
+varForecast vm rs = phi0 vm + sum (zipWith (C.<>) (phis vm) rs)
 
 -- | The i-th residual of a var(p) model.
 varResidual :: VarModel -- ^ The var(p) model as returned by varModel.
@@ -160,7 +160,7 @@ akaikeInfoCrit :: Int
                     -> Int -- ^ Upper bound for the order of the var model.
                     -> VarModel -- ^ The best var model with minimal aic.
 akaikeInfoCrit dimV s m = let
-    aic vm = log (abs (LA.det $ mlResidualCovariance vm i s)) + (2.0 * fromIntegral dimV^(2 :: Int) * fromIntegral i) / fromIntegral (length s) where i = (length $ snd vm)
+    aic vm = log (abs (LA.det $ mlResidualCovariance vm i s)) + (2.0 * fromIntegral dimV^(2 :: Int) * fromIntegral i) / fromIntegral (length s) where i = (length $ phis vm)
     in
     minimumBy (comparing aic) [varModel dimV i s | i <- [0 .. m]]
 
@@ -177,7 +177,7 @@ companionMatrix :: Int -- ^ Dimension of vector space.
                     -> VarModel -- ^ The var model.
                     -> Matrix
 companionMatrix i _ | i <= 0 = undefined
-companionMatrix dimV vm = P.fromBlocks [[0, C.ident (dimV * (p - 1))], reverse $ snd vm] where p = length $ snd vm
+companionMatrix dimV vm = P.fromBlocks [[0, C.ident (dimV * (p - 1))], reverse $ phis vm] where p = length $ phis vm
 
 -- | Mahalanobis distance.
 mahalanobis :: Matrix -- ^ Inverse covariance matrix.
