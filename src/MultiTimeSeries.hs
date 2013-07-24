@@ -17,6 +17,7 @@ module MultiTimeSeries (
         , crossvariance
         , crosscorrelation
         , portmanteauTest
+        , VarModel (..)
         , varModel
         , varForecast
         , varResidual
@@ -48,7 +49,7 @@ type Vector = P.Vector Double
 type Matrix = P.Matrix Double
 type Sample = [Vector]
 type WeightedSample = [(Double, Vector)]
-data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} -- ^ (\phi_0, matrices \Phi_1 ... \Phi_p).
+data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} deriving (Show, Eq, Read) -- ^ (\phi_0, matrices \Phi_1 ... \Phi_p).
 
 
 -- | Estimates the mean of a sample.
