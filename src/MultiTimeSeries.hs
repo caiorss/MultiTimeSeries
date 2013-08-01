@@ -7,7 +7,6 @@
 -- Stability   :  experimental
 -- Portability :  unknown
 
-
 module MultiTimeSeries (
         Sample
         , Vector
@@ -27,6 +26,7 @@ module MultiTimeSeries (
         , weaklyStationary
         , mahalanobis
         , fromLists
+        , fromLists'
 )
 
 where
@@ -43,7 +43,6 @@ import Statistics.Test.Types (TestResult(..), significant)
 import Data.List
 import Data.Ord (comparing)
 import Data.Complex (magnitude)
-import Data.Function (on)
 
 type Vector = P.Vector Double
 type Matrix = P.Matrix Double
@@ -196,18 +195,20 @@ fromLists :: Ord a => V.Vector [(Double, a)] -> [Vector]
 fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
 
 -- | Create a list of vector with values and timestamps.
-fromLists' :: Ord a => V.Vector [(Double, a)] -> [V.Vector (Double, a)]
-fromLists' xs = go (Just first) []
+fromLists' :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
+fromLists' xs = go zippers []
     where 
-            go (Just v) vs = go (next v) (v : vs)
-            go Nothing vs = vs
+            go zs vs 
+                    -- stop when we hit the beginning of a zipper.
+                    | and $ V.toList $ fmap Z.beginp zs = V.map Z.cursor zs : vs
+                    | otherwise = go (next zs) (V.map Z.cursor zs : vs)
 
-            first = V.map Z.cursor zippers
-            zippers = V.map Z.fromListEnd xs
+            zippers = V.map (Z.left . Z.fromListEnd) xs
 
-            next v = fmap (\n -> v V.// [(i, n)]) (left $ zippers V.! i) where i = maxIndex v
-            maxIndex = V.maxIndexBy (compare `on` snd)
-            left = Z.safeCursor . Z.left
+            next zs = V.update zs $ V.map (\i -> (i, Z.left $ zs V.! i)) maxIndeces
+                    where   
+                        maxIndeces = V.elemIndices maxi $ fmap (snd . Z.cursor) zs
+                        maxi = V.maximum $ fmap (snd . Z.cursor) zs
 
 -- | Convert generic vectors to vectors of hmatrix.
 toHVector :: V.Vector Double -> Vector
