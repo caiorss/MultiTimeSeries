@@ -194,7 +194,7 @@ trace m = G.sum $ LA.takeDiag m
 fromLists :: Ord a => V.Vector [(Double, a)] -> [Vector]
 fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
 
--- | Create a list of vector with values and timestamps.
+-- | Create a list of vectors with values and timestamps.
 fromLists' :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
 fromLists' xs = go zippers []
     where 
