@@ -100,17 +100,21 @@ portmanteauTest dimV m s = let
 -- r_t = \phi_0 + \sum_{i=1}^p \Phi_i r_{t-i} + e_t
 varModel :: Int -- ^ Dimension of the vector space.
             -> Int -- ^ p parameter of the model.
-            -> Sample -- ^ The sample.
+            -> Sample -- ^ The sample. The size needs to be > p.
             -> VarModel -- ^ A var(p) model.
 varModel dimV p s = let
     l = length s
     -- build matrices as described here:
     -- http://en.wikipedia.org/wiki/General_matrix_notation_of_a_VAR(p)
-    m_Y = P.fromColumns $ drop (l - p) s
-    m_Z = P.fromBlocks ([1] : [map P.asColumn (take (l - p) (drop (p - i) s)) | i <- [1 .. p]])
-    m_B = m_Y C.<\> m_Z
-    cs_m_B = P.toColumns m_B
+    m_Y = P.fromColumns $ drop p s
+    m_Z = P.fromBlocks $ replicate (l - p) 1 : [map P.asColumn (take (l - p) (drop (p - i) s)) | i <- [1 .. p]]
+    m_B = P.trans m_Z C.<\> P.trans m_Y
+
+    cs_m_B = P.toColumns $ P.trans m_B
+
+    submatrices [] = []
     submatrices cs = (take dimV cs : submatrices (drop dimV cs))
+
     in
     VarModel (head cs_m_B) (map P.fromColumns (submatrices $ tail cs_m_B))
 
