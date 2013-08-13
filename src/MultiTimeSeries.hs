@@ -27,6 +27,7 @@ module MultiTimeSeries (
         , akaikeInfoCrit
         , weaklyStationary
         , mahalanobis
+        , mahalanobisFilter
         , fromLists
         , fromLists'
 )
@@ -188,11 +189,28 @@ companionMatrix :: Int -- ^ Dimension of vector space.
 companionMatrix i _ | i <= 0 = undefined
 companionMatrix dimV vm = P.fromBlocks [[0, C.ident (dimV * (p - 1))], reverse $ phis vm] where p = length $ phis vm
 
+type Norm = Vector -> Double
+
 -- | Mahalanobis distance.
 mahalanobis :: Matrix -- ^ Inverse covariance matrix.
-                        -> Vector
-                        -> Double
+               -> Norm
 mahalanobis m_Sigma_inv v = v `C.dot` (m_Sigma_inv C.<> v)
+
+distanceFilter :: Double -- ^ Scale factor
+                    -> Double -- ^ Radius.
+                    -> Norm  -- ^ Vector norm.
+                    -> Sample -> Sample
+distanceFilter s r n (v:vs) = v : go v vs
+    where go x (y:xs) = if n (x - y) <= r 
+                        then go x xs
+                        else y : go (C.scale r y) xs
+          go _ [] = []
+
+mahalanobisFilter :: Double  -- ^ Scale factor.
+                        -> Double -- ^ Radius.
+                        -> Matrix -- ^ Inverse covariance matrix.
+                        -> Sample -> Sample
+mahalanobisFilter s r m = distanceFilter s r (mahalanobis m)
 
 -- | Calculate the trace of a matrix.
 trace :: Matrix -> Double
