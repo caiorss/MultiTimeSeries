@@ -13,6 +13,8 @@ module MultiTimeSeries (
         , Matrix
         , WeightedSample
         , mean
+        , stddev
+        , crosscovariance
         , crossvariance
         , crosscorrelation
         , portmanteauTest
@@ -55,6 +57,10 @@ data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} deriving (Show, Eq, 
 mean :: Sample -> Vector
 mean s = C.scale (1 / fromIntegral (length s)) (sum s)
 
+-- | Estimates the standart deviation.
+stddev :: Sample -> Vector
+stddev s = G.map sqrt $ C.scale (1 /fromIntegral (length s)) $ sum (map (G.map (^(2 :: Int)) . (\v -> v - mean s)) s)
+
 -- | Estimates the crosscovariance matrix.
 crosscovariance :: Sample -> Sample -> Matrix
 crosscovariance s1 s2 = C.scale (1 / fromIntegral (length s1)) (sum $ zipWith C.outer s1 s2)
@@ -73,11 +79,10 @@ crossvariance l s = let
 crosscorrelation :: Int -- ^ Lag. 
                     -> Sample -- ^ The sample.
                     -> Matrix -- ^ Crosscorrelation matrix.
--- Check for zero standart deviation.
-crosscorrelation _ s | C.prodElements (sum (map (G.map (^(2 :: Int)) . (\v -> v - mean s)) s)) == 0 = undefined
+-- Check for zero standart deviations.
+crosscorrelation _ s | (C.prodElements . stddev) s == 0 = undefined
 crosscorrelation l s = let
-    s' = map (\v -> v - mean s) s
-    m_D_inv = C.diag $ G.map ((1/) . sqrt) (sum $ map (G.map (^(2 :: Int))) s')
+    m_D_inv = C.diag $ G.map (1/) $ stddev s
     m_Gamma_l = crossvariance l s
     in
     m_D_inv C.<> m_Gamma_l C.<> m_D_inv
