@@ -30,6 +30,7 @@ module MultiTimeSeries (
         , mahalanobisFilter
         , fromLists
         , fromLists'
+        , difference
 )
 
 where
@@ -240,3 +241,9 @@ fromLists' xs = go zippers []
 -- | Convert generic vectors to vectors of hmatrix.
 toHVector :: V.Vector Double -> Vector
 toHVector v = P.buildVector (V.length v) (v V.!)
+
+-- | Take differences of a sample.
+difference :: Sample -> Sample
+difference (v : vs) = v : go v vs
+    where   go x (y : ys) = (y - x) : go y ys
+            go _ [] = []
