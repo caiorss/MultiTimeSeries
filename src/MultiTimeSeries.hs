@@ -244,6 +244,6 @@ toHVector v = P.buildVector (V.length v) (v V.!)
 
 -- | Take differences of a sample.
 difference :: Sample -> Sample
-difference (v : vs) = v : go v vs
+difference (v : vs) = go v vs
     where   go x (y : ys) = (y - x) : go y ys
             go _ [] = []
