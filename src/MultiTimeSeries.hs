@@ -204,7 +204,7 @@ distanceFilter :: Double -- ^ Scale factor
 distanceFilter s r n (v:vs) = v : go v vs
     where go x (y:xs) = if n (x - y) <= r 
                         then go x xs
-                        else y : go (C.scale r y) xs
+                        else y : go (y + C.scale s (y - x)) xs
           go _ [] = []
 
 mahalanobisFilter :: Double  -- ^ Scale factor.
