@@ -45,6 +45,7 @@ import Statistics.Distribution (Distribution, cumulative)
 import Statistics.Distribution.ChiSquared
 import Statistics.Test.Types (TestResult(..), significant)
 import Data.List
+import Data.Maybe
 import Data.Ord (comparing)
 import Data.Complex (magnitude)
 
@@ -206,6 +207,7 @@ distanceFilter s r n (v:vs) = v : go v vs
                         then go x xs
                         else y : go (y + C.scale s (y - x)) xs
           go _ [] = []
+distanceFilter _ _ _ [] = []
 
 mahalanobisFilter :: Double  -- ^ Scale factor.
                         -> Double -- ^ Radius.
@@ -218,25 +220,33 @@ trace :: Matrix -> Double
 trace m = G.sum $ LA.takeDiag m 
 
 -- | Create a sample from an array of 1-dimensional samples with timestamps.
--- | TODO: if performance of this 'map' is bad, this should be replaced by a direct method as in fromLists'.
 fromLists :: Ord a => V.Vector [(Double, a)] -> [Vector]
 fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
 
--- | Create a list of vectors with values and timestamps.
+-- | Create a list of vectors with values and timestamps. Every list in the vector needs to contain at least one element.
 fromLists' :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
-fromLists' xs = go zippers []
+fromLists' xs = go zippers
     where 
-            go zs vs 
-                    -- stop when we hit the beginning of a zipper.
-                    | and $ V.toList $ fmap Z.beginp zs = V.map Z.cursor zs : vs
-                    | otherwise = go (next zs) (V.map Z.cursor zs : vs)
+            go zs
+                    -- stop when we hit the end of a zipper.
+                    | V.all (Z.endp . Z.right) zs = [V.map Z.cursor zs]
+                    | otherwise = V.map Z.cursor zs : go (next zs)
 
-            zippers = V.map (Z.left . Z.fromListEnd) xs
+            zippers = forwardTo maxi $ V.map Z.fromList xs
+                where
+                    maxi = V.maximum $ fmap (snd . head) xs
 
-            next zs = V.update zs $ V.map (\i -> (i, Z.left $ zs V.! i)) maxIndeces
+            forwardTo t zs
+                        | V.all ((>= t) . snd . Z.cursor . Z.right) zs = zs
+                        | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, Z.right $ zs V.! i)) is
+                            where is = V.findIndices ((< t) . snd . Z.cursor) zs
+
+            next zs = V.update zs $ V.map (\i -> (i, Z.right $ zs V.! i)) minIndeces
                     where   
-                        maxIndeces = V.elemIndices maxi $ fmap (snd . Z.cursor) zs
-                        maxi = V.maximum $ fmap (snd . Z.cursor) zs
+                        minIndeces = V.elemIndices mini zs'
+                        -- zs' is not empty, otherwise go would have hit the first guard.
+                        mini = V.minimum zs'
+                        zs' = V.filter isJust $ fmap (fmap snd . Z.safeCursor . Z.right) zs
 
 -- | Convert generic vectors to vectors of hmatrix.
 toHVector :: V.Vector Double -> Vector
@@ -247,3 +257,4 @@ difference :: Sample -> Sample
 difference (v : vs) = go v vs
     where   go x (y : ys) = (y - x) : go y ys
             go _ [] = []
+difference [] = []
