@@ -217,10 +217,10 @@ mahalanobisFilter s r m = distanceFilter s r (mahalanobis m)
 
 -- | Calculate the trace of a matrix.
 trace :: Matrix -> Double
-trace m = G.sum $ LA.takeDiag m 
+trace m = G.sum $ LA.takeDiag m
 
 -- | Create a sample from an array of 1-dimensional samples with timestamps.
-fromLists :: Ord a => V.Vector [(Double, a)] -> [Vector]
+fromLists :: Ord a => V.Vector [(Double, a)] -> Sample
 fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
 
 -- | Create a list of vectors with values and timestamps. Every list in the vector needs to contain at least one element.
@@ -248,9 +248,9 @@ fromLists' xs = go zippers
                         mini = V.minimum zs'
                         zs' = V.filter isJust $ fmap (fmap snd . Z.safeCursor . Z.right) zs
 
--- | Convert generic vectors to vectors of hmatrix.
+-- | Convert generic vectors to vectors of hmatrix. TODO: this is a performance bottleneck.
 toHVector :: V.Vector Double -> Vector
-toHVector v = P.buildVector (V.length v) (v V.!)
+toHVector = P.fromList . V.toList
 
 -- | Take differences of a sample.
 difference :: Sample -> Sample
