@@ -29,7 +29,7 @@ module MultiTimeSeries (
         , mahalanobis
         , mahalanobisFilter
         , toSample
-        , fromLists
+        , orderByTime
         , difference
 )
 
@@ -45,7 +45,6 @@ import Statistics.Distribution (Distribution, cumulative)
 import Statistics.Distribution.ChiSquared
 import Statistics.Test.Types (TestResult(..), significant)
 import Data.List
-import Data.Maybe
 import Data.Ord (comparing)
 import Data.Complex (magnitude)
 
@@ -221,11 +220,11 @@ trace m = G.sum $ LA.takeDiag m
 
 -- | Create a sample from an array of 1-dimensional samples with timestamps.
 toSample :: Ord a => V.Vector [(Double, a)] -> Sample
-toSample = map (V.convert . V.map fst) . fromLists
+toSample = map (V.convert . V.map fst) . orderByTime
 
 -- | Create a list of vectors with values and timestamps. Every list in the vector needs to contain at least one element.
-fromLists :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
-fromLists xs = go zippers
+orderByTime :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
+orderByTime xs = go zippers
     where 
             go zs
                     -- stop when we hit the end of a zipper.
@@ -241,12 +240,16 @@ fromLists xs = go zippers
                         | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, Z.right $ zs V.! i)) is
                             where is = V.findIndices ((< t) . snd . Z.cursor) zs
 
-            next zs = V.update zs $ V.map (\i -> (i, Z.right $ zs V.! i)) minIndeces
+            next zs = V.update zs' $ V.map (\i -> (i, zs' V.! i)) minIndeces
                     where   
-                        minIndeces = V.elemIndices mini zs'
+                        minIndeces = V.elemIndices mini zs''
                         -- zs' is not empty, otherwise go would have hit the first guard.
-                        mini = V.minimum zs'
-                        zs' = V.filter isJust $ fmap (fmap snd . Z.safeCursor . Z.right) zs
+                        mini = V.minimum zs''
+                        zs' = fmap safeRight zs
+                        zs'' = fmap (snd . Z.cursor) zs'
+
+            safeRight z = let z' = Z.right z in 
+                if Z.endp z' then z else z'
 
 -- | Take differences of a sample.
 difference :: Sample -> Sample
