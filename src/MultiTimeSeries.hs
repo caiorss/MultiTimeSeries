@@ -236,8 +236,8 @@ orderByTime xs = go zippers
                     maxi = V.maximum $ fmap (snd . head) xs
 
             forwardTo t zs
-                        | V.all ((>= t) . snd . Z.cursor . Z.right) zs = zs
-                        | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, Z.right $ zs V.! i)) is
+                        | V.all ((>= t) . snd . Z.cursor . safeRight) zs = zs
+                        | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, safeRight $ zs V.! i)) is
                             where is = V.findIndices ((< t) . snd . Z.cursor) zs
 
             next zs = V.update zs' $ V.map (\i -> (i, zs' V.! i)) minIndeces
