@@ -28,8 +28,8 @@ module MultiTimeSeries (
         , weaklyStationary
         , mahalanobis
         , mahalanobisFilter
+        , toSample
         , fromLists
-        , fromLists'
         , difference
 )
 
@@ -220,12 +220,12 @@ trace :: Matrix -> Double
 trace m = G.sum $ LA.takeDiag m
 
 -- | Create a sample from an array of 1-dimensional samples with timestamps.
-fromLists :: Ord a => V.Vector [(Double, a)] -> Sample
-fromLists xs = map (toHVector . V.map fst) $ fromLists' xs
+toSample :: Ord a => V.Vector [(Double, a)] -> Sample
+toSample = map (V.convert . V.map fst) . fromLists
 
 -- | Create a list of vectors with values and timestamps. Every list in the vector needs to contain at least one element.
-fromLists' :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
-fromLists' xs = go zippers
+fromLists :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
+fromLists xs = go zippers
     where 
             go zs
                     -- stop when we hit the end of a zipper.
@@ -247,10 +247,6 @@ fromLists' xs = go zippers
                         -- zs' is not empty, otherwise go would have hit the first guard.
                         mini = V.minimum zs'
                         zs' = V.filter isJust $ fmap (fmap snd . Z.safeCursor . Z.right) zs
-
--- | Convert generic vectors to vectors of hmatrix. TODO: this is a performance bottleneck.
-toHVector :: V.Vector Double -> Vector
-toHVector = P.fromList . V.toList
 
 -- | Take differences of a sample.
 difference :: Sample -> Sample
