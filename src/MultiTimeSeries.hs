@@ -47,6 +47,8 @@ import Statistics.Test.Types (TestResult(..), significant)
 import Data.List
 import Data.Ord (comparing)
 import Data.Complex (magnitude)
+import qualified Control.Foldl as F
+import Control.Applicative
 
 type Vector = P.Vector Double
 type Matrix = P.Matrix Double
@@ -57,7 +59,10 @@ data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} deriving (Show, Eq, 
 
 -- | Estimates the mean of a sample.
 mean :: Sample -> Vector
-mean s = C.scale (1 / fromIntegral (length s)) (sum s)
+mean = F.fold meanF
+
+meanF :: F.Fold Vector Vector
+meanF = (\l s -> C.scale (1 / l) s) <$> F.genericLength <*> F.sum
 
 -- | Estimates the standart deviation.
 stddev :: Sample -> Vector
