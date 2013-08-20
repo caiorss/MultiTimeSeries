@@ -17,5 +17,9 @@ cabal-version:       >=1.8
 library
   exposed-modules:     MultiTimeSeries
   -- other-modules:       
-  build-depends:       base ==4.6.*, hmatrix ==0.14.*, vector ==0.10.*, ListZipper ==1.2.*, statistics ==0.10.*
+  build-depends:       base ==4.6.*, 
+                        hmatrix >= 0.14.1, 
+                        vector ==0.10.*, 
+                        ListZipper ==1.2.*, 
+                        statistics ==0.10.*
   hs-source-dirs:      src
