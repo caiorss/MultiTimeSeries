@@ -66,7 +66,10 @@ meanF = (\l s -> C.scale (1 / l) s) <$> F.genericLength <*> F.sum
 
 -- | Estimates the standart deviation.
 stddev :: Sample -> Vector
-stddev s = G.map sqrt $ C.scale (1 /fromIntegral (length s)) $ sum (map (G.map (^(2 :: Int)) . (\v -> v - mean s)) s)
+stddev s = (F.fold $ stddevF (mean s)) s
+
+stddevF :: Vector -> F.Fold Vector Vector
+stddevF m = fmap (G.map sqrt) ((\l s -> C.scale (1 / l) s) <$> F.genericLength <*> F.foldMap (G.map (^(2 :: Int)) . (\v -> v - m)) id)
 
 -- | Estimates the crosscovariance matrix.
 crosscovariance :: Sample -> Sample -> Matrix
