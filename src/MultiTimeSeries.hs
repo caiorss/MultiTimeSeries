@@ -134,7 +134,6 @@ varModel dimV p s = let
 varForecast :: VarModel  -- ^ The var(p) model as returned by varModel.
                 -> [Vector] -- ^ [r_{t-1}, r_{t-2}, ... r_{t-p}]
                 -> Vector -- ^ The resulting forecast.
-varForecast _ vs | null vs = undefined
 varForecast vm rs = phi0 vm + sum (zipWith (C.<>) (phis vm) rs)
 
 -- | The i-th residual of a var(p) model.
