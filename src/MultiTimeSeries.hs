@@ -7,6 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  unknown
 
+{-# LANGUAGE FlexibleContexts #-}
 module MultiTimeSeries (
         Sample
         , Vector
@@ -61,7 +62,7 @@ data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} deriving (Show, Eq, 
 mean :: Sample -> Vector
 mean = F.fold meanF
 
-meanF :: F.Fold Vector Vector
+meanF :: (Num (a Double), C.Container a Double) => F.Fold (a Double) (a Double)
 meanF = (\l s -> C.scale (1 / l) s) <$> F.genericLength <*> F.sum
 
 -- | Estimates the standart deviation.
@@ -73,7 +74,7 @@ stddevF m = fmap (G.map sqrt) ((\l s -> C.scale (1 / l) s) <$> F.genericLength <
 
 -- | Estimates the crosscovariance matrix.
 crosscovariance :: Sample -> Sample -> Matrix
-crosscovariance s1 s2 = C.scale (1 / fromIntegral (length s1)) (sum $ zipWith C.outer s1 s2)
+crosscovariance s1 s2 = F.fold meanF (zipWith C.outer s1 s2)
 
 -- | Estimates the crossvariance with a certain lag of a sample
 crossvariance :: Int -- ^ Lag.
