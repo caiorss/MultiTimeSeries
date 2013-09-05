@@ -41,7 +41,6 @@ import qualified Numeric.Container as C
 import qualified Numeric.LinearAlgebra as LA
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector as V
-import qualified Data.List.Zipper as Z
 import Statistics.Distribution (Distribution, cumulative)
 import Statistics.Distribution.ChiSquared
 import Statistics.Test.Types (TestResult(..), significant)
@@ -236,28 +235,32 @@ orderByTime xs = go zippers
     where 
             go zs
                     -- stop when we hit the end of a zipper.
-                    | V.all (Z.endp . Z.right) zs = [V.map Z.cursor zs]
-                    | otherwise = V.map Z.cursor zs : go (next zs)
+                    | V.all atEnd zs = [V.map head zs]
+                    | otherwise = V.map head zs : go (next zs)
 
-            zippers = forwardTo maxi $ V.map Z.fromList xs
+                    where 
+                        atEnd (_:[]) = True
+                        atEnd _ = False
+
+            zippers = forwardTo maxi xs
                 where
                     maxi = V.maximum $ fmap (snd . head) xs
 
             forwardTo t zs
-                        | V.all ((>= t) . snd . Z.cursor . safeRight) zs = zs
-                        | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, safeRight $ zs V.! i)) is
-                            where is = V.findIndices ((< t) . snd . Z.cursor) zs
+                        | V.all ((>= t) . snd . head . safeTail) zs = zs
+                        | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, safeTail $ zs V.! i)) is
+                            where is = V.findIndices ((< t) . snd . head) zs
 
-            next zs = V.update zs' $ V.map (\i -> (i, zs' V.! i)) minIndeces
+            next zs = V.update zs $ V.map (\i -> (i, zs'' V.! i)) minIndeces
                     where   
-                        minIndeces = V.elemIndices mini zs''
+                        minIndeces = V.elemIndices mini $ V.map (snd . head) zs''
                         -- zs' is not empty, otherwise go would have hit the first guard.
-                        mini = V.minimum zs''
-                        zs' = fmap safeRight zs
-                        zs'' = fmap (snd . Z.cursor) zs'
+                        mini = V.minimum zs'
+                        zs' = V.map (snd . head) $ V.filter (not . null) $ V.map tail zs
+                        zs'' = V.map safeTail zs
 
-            safeRight z = let z' = Z.right z in 
-                if Z.endp z' then z else z'
+            safeTail ([y]) = [y]
+            safeTail ys = tail ys
 
 -- | Take differences of a sample.
 difference :: Sample -> Sample
