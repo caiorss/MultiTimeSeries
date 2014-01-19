@@ -34,19 +34,20 @@ module MultiTimeSeries (
 
 where
 
+----------------------------------------------------------------------------------------------------
 import qualified Data.Packed as P
-import qualified Numeric.Container as C
-import qualified Numeric.LinearAlgebra as LA
-import qualified Data.Vector.Generic as G
-import qualified Data.Vector as V
-import Statistics.Distribution (Distribution, cumulative)
-import Statistics.Distribution.ChiSquared
-import Statistics.Test.Types (TestResult(..), significant)
 import Data.List
 import Data.Ord (comparing)
 import Data.Complex (magnitude)
-import qualified Control.Foldl as F
-import Control.Applicative
+import qualified Data.Vector.Generic as G
+----------------------------------------------------------------------------------------------------
+import qualified Numeric.Container as C
+import qualified Numeric.LinearAlgebra as LA
+----------------------------------------------------------------------------------------------------
+import Statistics.Distribution (Distribution, cumulative)
+import Statistics.Distribution.ChiSquared
+import Statistics.Test.Types (TestResult(..), significant)
+----------------------------------------------------------------------------------------------------
 
 type Vector = P.Vector Double
 type Matrix = P.Matrix Double
@@ -54,24 +55,25 @@ type Sample = [Vector]
 type WeightedSample = [(Double, Vector)]
 data VarModel = VarModel {phi0 :: Vector, phis :: [Matrix]} deriving (Show, Eq, Read) -- ^ (\phi_0, matrices \Phi_1 ... \Phi_p).
 
-
 -- | Estimates the mean of a sample.
-mean :: Sample -> Vector
-mean = F.fold meanF
-
-meanF :: (Num (a Double), C.Container a Double) => F.Fold (a Double) (a Double)
-meanF = (\l s -> C.scale (1 / l) s) <$> F.genericLength <*> F.sum
+mean :: (Num (c Double), C.Container c Double) => [c Double]-> c Double
+mean sample = 
+    let 
+        (summ, count) = foldl (\(s, c) v -> (s + v, c + 1)) (0, 0) sample
+    in
+    C.scale (1 / count) summ
 
 -- | Estimates the standart deviation.
 stddev :: Sample -> Vector
-stddev s = (F.fold $ stddevF (mean s)) s
-
-stddevF :: Vector -> F.Fold Vector Vector
-stddevF m = fmap (G.map sqrt) ((\l s -> C.scale (1 / l) s) <$> F.genericLength <*> F.foldMap (G.map (^(2 :: Int)) . (\v -> v - m)) id)
+stddev sample = 
+    let m = mean sample
+        (summ, count) = foldl (\(s, c) v -> (s + G.map (^(2 :: Int)) (v - m), c + 1)) (0, 0) sample
+    in 
+     G.map sqrt $ C.scale (1 / count) summ
 
 -- | Estimates the crosscovariance matrix.
 crosscovariance :: Sample -> Sample -> Matrix
-crosscovariance s1 s2 = F.fold meanF (zipWith C.outer s1 s2)
+crosscovariance s1 s2 = mean (zipWith C.outer s1 s2)
 
 -- | Estimates the crossvariance with a certain lag of a sample
 crossvariance :: Int -- ^ Lag.
