@@ -29,8 +29,6 @@ module MultiTimeSeries (
         , weaklyStationary
         , mahalanobis
         , mahalanobisFilter
-        , toSample
-        , orderByTime
         , difference
 )
 
@@ -224,43 +222,6 @@ mahalanobisFilter s r m = distanceFilter s r (mahalanobis m)
 -- | Calculate the trace of a matrix.
 trace :: Matrix -> Double
 trace m = G.sum $ LA.takeDiag m
-
--- | Create a sample from an array of 1-dimensional samples with timestamps.
-toSample :: Ord a => V.Vector [(Double, a)] -> Sample
-toSample = map (V.convert . V.map fst) . orderByTime
-
--- | Create a list of vectors with values and timestamps. Every list in the vector needs to contain at least one element.
-orderByTime :: Ord b => V.Vector [(a, b)] -> [V.Vector (a, b)]
-orderByTime xs = go zippers
-    where 
-            go zs
-                    -- stop when we hit the end of a zipper.
-                    | V.all atEnd zs = [V.map head zs]
-                    | otherwise = V.map head zs : go (next zs)
-
-                    where 
-                        atEnd (_:[]) = True
-                        atEnd _ = False
-
-            zippers = forwardTo maxi xs
-                where
-                    maxi = V.maximum $ fmap (snd . head) xs
-
-            forwardTo t zs
-                        | V.all ((>= t) . snd . head . safeTail) zs = zs
-                        | otherwise = forwardTo t $ V.update zs $ V.map (\i -> (i, safeTail $ zs V.! i)) is
-                            where is = V.findIndices ((< t) . snd . head) zs
-
-            next zs = V.update zs $ V.map (\i -> (i, zs'' V.! i)) minIndeces
-                    where   
-                        minIndeces = V.elemIndices mini $ V.map (snd . head) zs''
-                        -- zs' is not empty, otherwise go would have hit the first guard.
-                        mini = V.minimum zs'
-                        zs' = V.map (snd . head) $ V.filter (not . null) $ V.map tail zs
-                        zs'' = V.map safeTail zs
-
-            safeTail ([y]) = [y]
-            safeTail ys = tail ys
 
 -- | Take differences of a sample.
 difference :: Sample -> Sample
