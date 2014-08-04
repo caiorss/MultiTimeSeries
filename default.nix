@@ -6,7 +6,7 @@ haskellPackages.cabal.mkDerivation (self: with haskellPackages; {
   pname = "MultiTimeSeries";
   version = "0.1.0.0";
   src = ./.;
-  buildTools = [ cabalInstall_1_18_0_2 ];
+  buildTools = [ cabalInstall_1_20_0_3 ];
   buildDepends = [ foldl hmatrix statistics vector ];
   doCheck = false;
   strictConfigurePhase = false;

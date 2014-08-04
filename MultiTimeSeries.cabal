@@ -17,9 +17,9 @@ cabal-version:       >=1.8
 library
   exposed-modules:     MultiTimeSeries
   -- other-modules:       
-  build-depends:       base ==4.6.*
+  build-depends:       base >= 4.6 && < 5.0
                         , hmatrix >= 0.14.1
                         , vector ==0.10.*
                         , foldl >= 1.0.0
-                        , statistics ==0.10.*
+                        , statistics >=0.10 && < 0.15
   hs-source-dirs:      src
